@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b5ed7">
+<title>Obra Concluída</title>
+<style>
+  :root{
+    --bg:#f3f5f9; --card:#fff; --txt:#1c2330; --muted:#6a7487; --line:#d6dbe6;
+    --azul:#0b5ed7; --verde:#1fa855; --erro:#c62828; --aviso:#8a5a00; --avisobg:#fff4d6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+       padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+  header{background:var(--azul);color:#fff;padding:18px 16px}
+  header h1{margin:0;font-size:20px}
+  header p{margin:4px 0 0;font-size:14px;opacity:.9}
+  main{max-width:560px;margin:0 auto;padding:16px}
+  .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:16px}
+  label{display:block;font-weight:600;margin:14px 0 6px}
+  label:first-child{margin-top:0}
+  input,select{width:100%;font:inherit;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--txt);min-height:48px}
+  input:focus,select:focus{outline:2px solid var(--azul);border-color:var(--azul)}
+  input.invalido{border-color:var(--erro)}
+  .dica{font-size:13px;color:var(--muted);margin-top:4px}
+  .erro{font-size:13px;color:var(--erro);margin-top:4px;min-height:0}
+  .linha{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  button,.btn{display:block;width:100%;text-align:center;text-decoration:none;font:inherit;font-weight:700;
+       padding:14px;border:0;border-radius:10px;min-height:52px;cursor:pointer;margin-top:12px;color:#fff;background:var(--azul)}
+  button:disabled{opacity:.6}
+  .verde{background:var(--verde)}
+  .cinza{background:#fff;color:var(--txt);border:1px solid var(--line)}
+  .aviso{background:var(--avisobg);color:var(--aviso);padding:12px;border-radius:8px;font-size:14px;margin-bottom:12px}
+  .ok{background:#e3f6ea;color:#14663a;padding:12px;border-radius:8px;font-size:14px;margin-bottom:12px}
+  pre{white-space:pre-wrap;word-break:break-word;background:#f0f2f6;border-radius:8px;padding:12px;font:15px/1.5 ui-monospace,Menlo,Consolas,monospace;margin:0}
+  .oculto{display:none}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Obra concluída</h1>
+  <p>Preencha os dados e envie o resumo ao grupo.</p>
+</header>
+
+<main>
+
+  <!-- ============ TELA 1: FORMULÁRIO ============ -->
+  <section id="telaForm" class="card">
+    <form id="form" novalidate autocomplete="off">
+
+      <label for="projeto">Projeto</label>
+      <input id="projeto" name="projeto" type="text" maxlength="9" placeholder="B-1234567"
+             autocapitalize="characters" autocorrect="off" spellcheck="false" required>
+      <div class="dica">Formato: B- seguido de 7 números.</div>
+      <div class="erro" id="erroProjeto"></div>
+
+      <label for="equipe">Equipe</label>
+      <select id="equipe" name="equipe" required></select>
+
+      <div class="linha">
+        <div>
+          <label for="postes">Qtd. de postes</label>
+          <input id="postes" name="postes" type="number" inputmode="numeric" min="0" step="1" required>
+        </div>
+        <div>
+          <label for="clientes">Qtd. de clientes</label>
+          <input id="clientes" name="clientes" type="number" inputmode="numeric" min="0" step="1" required>
+        </div>
+      </div>
+
+      <label for="pes">PES</label>
+      <input id="pes" name="pes" type="text" placeholder="2026-206380" autocapitalize="characters" required>
+
+      <label for="oc">OC</label>
+      <input id="oc" name="oc" type="text" placeholder="2026_10_71582" autocapitalize="characters" required>
+
+      <label for="supervisor">Supervisor</label>
+      <select id="supervisor" name="supervisor" required></select>
+
+      <label for="data">Concluída e energizada em</label>
+      <input id="data" name="data" type="date" required>
+
+      <div class="erro" id="erroGeral"></div>
+      <button type="submit" id="btnEnviar">Salvar e preparar envio</button>
+    </form>
+  </section>
+
+  <!-- ============ TELA 2: RESULTADO ============ -->
+  <section id="telaResultado" class="card oculto">
+    <div id="statusSalvo"></div>
+
+    <label>Resumo que será enviado</label>
+    <pre id="previa"></pre>
+
+    <button type="button" class="verde" id="btnCopiarAbrir">Copiar resumo e abrir o grupo</button>
+    <div class="dica">Ao abrir o grupo, segure no campo de mensagem e toque em “Colar”.</div>
+
+    <a class="btn cinza" id="btnWhats" href="#" target="_blank" rel="noopener">Enviar pelo WhatsApp (escolher a conversa)</a>
+    <button type="button" class="cinza" id="btnCopiar">Só copiar o resumo</button>
+    <button type="button" class="oculto cinza" id="btnRetentar">Tentar salvar na planilha de novo</button>
+    <button type="button" id="btnNovo">Novo registro</button>
+  </section>
+
+</main>
+
+<script>
+/* =====================================================================
+   ÁREA DO ADMINISTRADOR — edite apenas este bloco
+   ===================================================================== */
+const CONFIG = {
+
+  // URL do Web App do Google Apps Script (veja o passo a passo).
+  // Enquanto estiver vazio, a página funciona, mas NÃO salva na planilha.
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycby_a3V15LqUCBWdDv35iSbQQ5mfeXbdOgdcsNowGluYmZJHHLRzBuumHy0AO7ktCb0b/exec",
+
+  // Link de convite do grupo de WhatsApp
+  WHATSAPP_GROUP: "https://chat.whatsapp.com/CWJLSofL0pX0rY30qUAlJS",
+
+  // Regra do campo Projeto: B- + 7 dígitos
+  PROJETO_REGEX: "^B-\\d{7}$",
+
+  // Listas suspensas (uma opção por linha, entre aspas, separadas por vírgula).
+  // Se a planilha tiver a aba "Listas", ela substitui estas listas automaticamente.
+  EQUIPES: [
+    "EH007", "EH008", "EH010", "EH011", "EH012",
+    "EH013", "EH016", "EH018", "EH020", "EH028",
+    "EH029", "EH034", "EH035", "EH037", "EH038",
+    "EH042", "EH060", "EH061", "EH063", "EH090"
+  ],
+  SUPERVISORES: [
+    "JUNIO SERTÃO",
+    "RAUNI SIQUEIRA",
+    "GABRIEL FRANCO",
+    "FABRÍCIO LIMA",
+    "LARISSA COSTA"
+  ]
+};
+/* ===================================================================== */
+
+const $ = id => document.getElementById(id);
+const regexProjeto = new RegExp(CONFIG.PROJETO_REGEX);
+let ultimo = null;   // últimos dados enviados
+
+function preencherSelect(sel, itens){
+  sel.innerHTML = "";
+  const ph = document.createElement("option");
+  ph.value = ""; ph.textContent = "Selecione…"; ph.disabled = true; ph.selected = true;
+  sel.appendChild(ph);
+  itens.forEach(t => {
+    const o = document.createElement("option");
+    o.value = t; o.textContent = t;
+    sel.appendChild(o);
+  });
+}
+
+function hojeISO(){
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0,10);
+}
+
+function dataBR(iso){
+  const [a,m,d] = iso.split("-");
+  return `${d}/${m}/${a}`;
+}
+
+/* Listas vindas da planilha (aba "Listas"), se existir */
+async function carregarListasDaPlanilha(){
+  if(!CONFIG.SCRIPT_URL) return;
+  try{
+    const r = await fetch(CONFIG.SCRIPT_URL + "?acao=listas");
+    const j = await r.json();
+    if(j.equipes && j.equipes.length){ guardarSelecao("equipe", j.equipes); }
+    if(j.supervisores && j.supervisores.length){ guardarSelecao("supervisor", j.supervisores); }
+  }catch(e){ /* mantém as listas do CONFIG */ }
+}
+function guardarSelecao(id, itens){
+  const sel = $(id), atual = sel.value;
+  preencherSelect(sel, itens);
+  if(atual && itens.includes(atual)) sel.value = atual;
+}
+
+/* Projeto: maiúsculas + validação em tempo real */
+function validarProjeto(){
+  const el = $("projeto");
+  el.value = el.value.toUpperCase().replace(/\s+/g,"");
+  const v = el.value;
+  const ok = regexProjeto.test(v);
+  el.classList.toggle("invalido", v.length > 0 && !ok);
+  $("erroProjeto").textContent = (v.length > 0 && !ok) ? "Projeto inválido. Use o formato B-1234567." : "";
+  return ok;
+}
+$("projeto").addEventListener("input", validarProjeto);
+
+function coletar(){
+  return {
+    projeto:    $("projeto").value.trim().toUpperCase(),
+    equipe:     $("equipe").value,
+    postes:     $("postes").value,
+    clientes:   $("clientes").value,
+    pes:        $("pes").value.trim().toUpperCase(),
+    oc:         $("oc").value.trim().toUpperCase(),
+    supervisor: $("supervisor").value,
+    data:       $("data").value
+  };
+}
+
+function validar(d){
+  $("erroGeral").textContent = "";
+  if(!validarProjeto()){ $("projeto").focus(); return false; }
+  const faltando = [];
+  if(!d.equipe) faltando.push("Equipe");
+  if(d.postes === "") faltando.push("Qtd. de postes");
+  if(d.clientes === "") faltando.push("Qtd. de clientes");
+  if(!d.pes) faltando.push("PES");
+  if(!d.oc) faltando.push("OC");
+  if(!d.supervisor) faltando.push("Supervisor");
+  if(!d.data) faltando.push("Data");
+  if(faltando.length){
+    $("erroGeral").textContent = "Preencha: " + faltando.join(", ") + ".";
+    return false;
+  }
+  return true;
+}
+
+function montarMensagem(d){
+  return [
+    "*OBRA CONCLUÍDA*",
+    "",
+    `*PROJETO:* ${d.projeto}`,
+    `*EQUIPE:* ${d.equipe}`,
+    `*QTD DE POSTES:* ${d.postes}`,
+    `*QTD DE CLIENTES:* ${d.clientes}`,
+    `*PES:* ${d.pes}`,
+    `*OC:* ${d.oc}`,
+    `*SUPERVISOR:* ${d.supervisor}`,
+    `*CONCLUÍDA E ENERGIZADA EM* ${dataBR(d.data)}`
+  ].join("\n");
+}
+
+async function salvarNaPlanilha(d){
+  if(!CONFIG.SCRIPT_URL) return "sem-config";
+  try{
+    await fetch(CONFIG.SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify(d)
+    });
+    return "ok";
+  }catch(e){
+    return "erro";
+  }
+}
+
+function mostrarStatus(estado){
+  const el = $("statusSalvo");
+  $("btnRetentar").classList.add("oculto");
+  if(estado === "ok"){
+    el.innerHTML = '<div class="ok">✔ Dados enviados para a planilha.</div>';
+  }else if(estado === "sem-config"){
+    el.innerHTML = '<div class="aviso">⚠ A planilha ainda não foi configurada: os dados NÃO foram salvos. O resumo do WhatsApp continua disponível.</div>';
+  }else{
+    el.innerHTML = '<div class="aviso">⚠ Sem conexão: os dados NÃO foram salvos na planilha. Você pode tentar de novo.</div>';
+    $("btnRetentar").classList.remove("oculto");
+  }
+}
+
+function mostrarTela(qual){
+  $("telaForm").classList.toggle("oculto", qual !== "form");
+  $("telaResultado").classList.toggle("oculto", qual !== "resultado");
+  window.scrollTo(0,0);
+}
+
+async function copiar(texto){
+  try{
+    await navigator.clipboard.writeText(texto);
+    return true;
+  }catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = texto; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    let ok = false;
+    try{ ok = document.execCommand("copy"); }catch(_){}
+    document.body.removeChild(ta);
+    return ok;
+  }
+}
+
+$("form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const d = coletar();
+  if(!validar(d)) return;
+  const btn = $("btnEnviar");
+  btn.disabled = true; btn.textContent = "Salvando…";
+  const estado = await salvarNaPlanilha(d);
+  btn.disabled = false; btn.textContent = "Salvar e preparar envio";
+
+  ultimo = d;
+  const msg = montarMensagem(d);
+  $("previa").textContent = msg;
+  $("btnWhats").href = "https://wa.me/?text=" + encodeURIComponent(msg);
+  mostrarStatus(estado);
+  mostrarTela("resultado");
+});
+
+$("btnCopiarAbrir").addEventListener("click", async () => {
+  const ok = await copiar(montarMensagem(ultimo));
+  if(!ok) alert("Não consegui copiar automaticamente. Use o botão de enviar pelo WhatsApp.");
+  window.location.href = CONFIG.WHATSAPP_GROUP;
+});
+
+$("btnCopiar").addEventListener("click", async e => {
+  const ok = await copiar(montarMensagem(ultimo));
+  e.target.textContent = ok ? "Copiado ✔" : "Não foi possível copiar";
+  setTimeout(() => e.target.textContent = "Só copiar o resumo", 2000);
+});
+
+$("btnRetentar").addEventListener("click", async e => {
+  e.target.disabled = true; e.target.textContent = "Salvando…";
+  const estado = await salvarNaPlanilha(ultimo);
+  e.target.disabled = false; e.target.textContent = "Tentar salvar na planilha de novo";
+  mostrarStatus(estado);
+});
+
+$("btnNovo").addEventListener("click", () => {
+  $("form").reset();
+  $("data").value = hojeISO();
+  $("projeto").classList.remove("invalido");
+  $("erroProjeto").textContent = "";
+  $("erroGeral").textContent = "";
+  ultimo = null;
+  mostrarTela("form");
+});
+
+/* Início */
+preencherSelect($("equipe"), CONFIG.EQUIPES);
+preencherSelect($("supervisor"), CONFIG.SUPERVISORES);
+$("data").value = hojeISO();
+carregarListasDaPlanilha();
+</script>
+</body>
+</html>
